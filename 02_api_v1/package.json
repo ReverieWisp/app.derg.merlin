@@ -1,0 +1,15 @@
+{
+  "name": "02_api_v1",
+  "version": "1.0.0",
+  "description": "Status viewing",
+  "main": "api_v1.js",
+  "dependencies": {
+    "express": "^4.16.4"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "test"
+  },
+  "author": "",
+  "license": "BSD-3-Clause"
+}

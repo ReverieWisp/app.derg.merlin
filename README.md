@@ -1,2 +1,2 @@
 # merlin
-Do the magic
+Do the magic! :D
