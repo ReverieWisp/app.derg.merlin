@@ -1,19 +1,18 @@
 // Requirements
-const os = require('os');
-const express = require('express');
-const app = express();
-const util = require('util');
-const request = require('request');
+const os = require('os');           // Operating system inforamtion
+const express = require('express'); // Endpoint creation
+const app = express();              // Endpoint initialization
+const util = require('util');       // Pretty printing
+const request = require('request'); // Used for issuing GET request
+const config = require('./config'); // Custom-defined config file
 
-// Settings
+// Const settings - see config variable for external.
 const api_root = "/api/v1/";
 const api_stats = api_root + "stats/";
 
 // Local variables
 let cpuHistory = [];         // Stores previously measured values
 let ramHistory = [];         // Stores previously measured values
-let maxTrackedLength = 50;   // Measured in entries #
-let refreshInterval = 5000; // Measured in ms
 
 
 
@@ -21,7 +20,7 @@ let refreshInterval = 5000; // Measured in ms
 function storeValue(target_array, toStore) {
 	target_array.unshift(toStore);
 
-	if(target_array.length > maxTrackedLength)
+	if(target_array.length > config.maxTrackedLength)
 		target_array.pop();
 }
 
@@ -88,5 +87,9 @@ function generateStats(machine_name, interval, other) {
 
 // Refresh automatically
 setInterval(function() {
-	generateStats("merlin", refreshInterval, null) // name, refresh interval, then any extra info as an array or string.
-}, refreshInterval);
+	generateStats(config.machineKey, config.refreshInterval, null) // name, refresh interval, then any extra info as an array or string.
+}, config.refreshInterval);
+
+
+// Denote logging
+console.log(`Client issuing reports every ${config.refreshInterval}ms under key '${config.machineKey}'`);
