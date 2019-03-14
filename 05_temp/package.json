@@ -1,0 +1,14 @@
+{
+  "name": "temperatures",
+  "version": "1.0.0",
+  "description": "Testing getting temperatures",
+  "main": "temps.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "systeminformation": "^4.1.1"
+  }
+}

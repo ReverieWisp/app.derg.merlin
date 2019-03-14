@@ -14,14 +14,19 @@ const api_stats = api_root + "stats/";
 // Local variables 
 let savedStatsItems = {};
 
+
+// --------------------------------------------------
+
+
+// Set appropriate headers - no sniff, and adjust headers.
 // https://helmetjs.github.io/docs/dont-sniff-mimetype/
 app.use(helmet.noSniff())
-
 app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  next();
+	res.header("Access-Control-Allow-Origin", "*");
+	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+	next();
 });
+
 
 // Root
 app.get(api_root, (req, res) => {
@@ -51,6 +56,15 @@ function formatErr(toFormat, formatExample) {
 // This api endpoint allows a specific key to report its max ram and associated load information.
 // The information is stored however it is entered for retrieval later. 
 // It outputs the formatted stats item so you can verify what was logged.
+// Fields: 
+//   key - string that is an identifier for the system
+//   ramMax - max amount of ram, in MB
+//   ramInterval - polling rate of ram, in ms
+//   cpuInterval - polling rate of cpu, in ms
+//   ramLoad[] - array of sets of used ram values, arbitrary length.
+//   cpuLoad[] - array of sets of used cpu values, arbitrary length.
+//   other[] (optional) - additional info, string array, anything, arbitrary length.
+//   hide - if this is "true", true, otherwise false. This determins if it shows up in the general list.
 let example_report = "/api/v1/stats/report?key=test&ramMax=8192&ramInterval=5000&ramLoad[]=2141&cpuInterval=5000&cpuLoad[]=34&cpuLoad[]=7&other[]=stuff";
 app.all(api_stats + "report/", (req, res) => {
 	let statsItem = {};
@@ -74,6 +88,7 @@ app.all(api_stats + "report/", (req, res) => {
 		statsItem.ramMax = req.query.ramMax;
 		statsItem.ramInterval = req.query.ramInterval;
 		statsItem.cpuInterval = req.query.cpuInterval;
+		statsItem.hide = false;
 		statsItem.ramLoad = [];
 		statsItem.cpuLoad = [];
 		statsItem.other = [];
@@ -100,6 +115,14 @@ app.all(api_stats + "report/", (req, res) => {
 				statsItem.other.push(req.query.other);
 			}
 		}
+
+		// Parse if we're hiding or not from the 'all' list
+		if(req.query.hide != null) {
+			if(req.query.hide == "true")
+				statsItem.hide = true;
+		}
+
+		console.log("Report from '" + statsItem.key + "'");
 	}
 
 	savedStatsItems[statsItem.key] = statsItem;
@@ -112,8 +135,7 @@ app.get(api_stats + "get/:key", (req, res) => {
 	let key = req.param("key");
 	let error = "Invalid stats 'get' request";
 
-	if(key == null)
-	{
+	if(key == null) {
 		res.send(error);
 		return;
 	}
@@ -124,6 +146,22 @@ app.get(api_stats + "get/:key", (req, res) => {
 	else
 		res.send(error);
 });
+
+
+// Allows you to poll all possible logged systems to request
+app.get(api_stats + "all/", (req, res) => {
+	let allKeys = Object.keys(savedStatsItems);
+	let toReturn = {};
+
+	toReturn.keys = [];
+
+	for(let i = 0; i < allKeys.length; ++i) {
+		if(savedStatsItems[allKeys[i]].hide == false)
+			toReturn.keys.push(allKeys[i]);
+	}
+
+	res.send(toReturn);
+})
 
 
 // Bind to port and begin listening
