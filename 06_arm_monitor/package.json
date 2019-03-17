@@ -1,0 +1,16 @@
+{
+  "name": "merlin_client",
+  "version": "1.0.0",
+  "description": "Status viewing",
+  "main": "merlin_client.js",
+  "dependencies": {
+    "express": "^4.16.4",
+    "request": "^2.88.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "test"
+  },
+  "author": "",
+  "license": "BSD-3-Clause"
+}
