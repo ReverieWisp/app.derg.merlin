@@ -138,6 +138,13 @@ app.all(api_stats + "report/", (req, res) => {
 });
 
 
+// Resets the internal arrays
+app.all(api_stats + "reset/", (req, res) => {
+	savedStatsItems = {};
+	res.send("cleared.");
+});
+
+
 // Allows the retrieval of temporarily stored information
 app.get(api_stats + "get/:key", (req, res) => {
 	let key = req.param("key");
