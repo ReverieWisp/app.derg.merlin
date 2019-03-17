@@ -1,11 +1,12 @@
 {
-  "name": "merlin_client",
+  "name": "sys_monitor",
   "version": "1.0.0",
   "description": "Status viewing",
-  "main": "merlin_client.js",
+  "main": "sys_monitor.js",
   "dependencies": {
     "express": "^4.16.4",
-    "request": "^2.88.0"
+    "request": "^2.88.0",
+    "systeminformation": "^4.1.1"
   },
   "devDependencies": {},
   "scripts": {

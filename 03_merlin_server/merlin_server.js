@@ -65,7 +65,7 @@ function formatErr(toFormat, formatExample) {
 //   cpuLoad[] - array of sets of used cpu values, arbitrary length.
 //   other[] (optional) - additional info, string array, anything, arbitrary length.
 //   hide - if this is "true", true, otherwise false. This determins if it shows up in the general list.
-let example_report = "/api/v1/stats/report?key=test&ramMax=8192&ramInterval=5000&ramLoad[]=2141&cpuInterval=5000&cpuLoad[]=34&cpuLoad[]=7&other[]=stuff";
+let example_report = "/api/v1/stats/report?key=test&ramMax=8192&ramInterval=5000&ramLoad[]=2141&cpuInterval=5000&cpuLoadUser[]=34&cpuLoadUser[]=7.24&cpuLoadSystem[]=3.4&cpuLoadSystem[]=7.7&other[]=stuff";
 app.all(api_stats + "report/", (req, res) => {
 	let statsItem = {};
 	let count = 0;
@@ -78,8 +78,10 @@ app.all(api_stats + "report/", (req, res) => {
 			|| req.query.cpuInterval == null 
 			|| req.query.ramLoad == null 
 			|| req.query.ramLoad.length == null 
-			|| req.query.cpuLoad == null 
-			|| req.query.cpuLoad.length == null) {
+			|| req.query.cpuLoadUser == null 
+			|| req.query.cpuLoadUser.length == null
+			|| req.query.cpuLoadSystem == null 
+			|| req.query.cpuLoadSystem.length == null) {
 			res.send(formatErr("formatting error", example_report));
 			return;
 		}
@@ -90,7 +92,8 @@ app.all(api_stats + "report/", (req, res) => {
 		statsItem.cpuInterval = req.query.cpuInterval;
 		statsItem.hide = false;
 		statsItem.ramLoad = [];
-		statsItem.cpuLoad = [];
+		statsItem.cpuLoadUser = [];
+		statsItem.cpuLoadSystem = [];
 		statsItem.other = [];
 
 		let ramLen = req.query.ramLoad.length;
@@ -98,9 +101,14 @@ app.all(api_stats + "report/", (req, res) => {
 			statsItem.ramLoad.push(req.query.ramLoad[i]);
 		}
 
-		let cpuLen = req.query.cpuLoad.length;
-		for (let i = 0; i < cpuLen; i++) {
-			statsItem.cpuLoad.push(req.query.cpuLoad[i]);
+		let cpuLenUser = req.query.cpuLoadUser.length;
+		for (let i = 0; i < cpuLenUser; i++) {
+			statsItem.cpuLoadUser.push(req.query.cpuLoadUser[i]);
+		}
+
+		let cpuLenSys = req.query.cpuLoadSystem.length;
+		for (let i = 0; i < cpuLenSys; i++) {
+			statsItem.cpuLoadSystem.push(req.query.cpuLoadSystem[i]);
 		}
 
 		// Parse additional stuff
