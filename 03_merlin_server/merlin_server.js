@@ -87,9 +87,9 @@ app.all(api_stats + "report/", (req, res) => {
 		}
 
 		statsItem.key = req.query.key;
-		statsItem.ramMax = req.query.ramMax;
-		statsItem.ramInterval = req.query.ramInterval;
-		statsItem.cpuInterval = req.query.cpuInterval;
+		statsItem.ramMax = Number.parseFloat(req.query.ramMax);
+		statsItem.ramInterval = Number.parseFloat(req.query.ramInterval);
+		statsItem.cpuInterval = Number.parseFloat(req.query.cpuInterval);
 		statsItem.hide = false;
 		statsItem.ramLoad = [];
 		statsItem.cpuLoadUser = [];
@@ -98,17 +98,17 @@ app.all(api_stats + "report/", (req, res) => {
 
 		let ramLen = req.query.ramLoad.length;
 		for (let i = 0; i < ramLen; i++) {
-			statsItem.ramLoad.push(req.query.ramLoad[i]);
+			statsItem.ramLoad.push(Number.parseFloat(req.query.ramLoad[i]));
 		}
 
 		let cpuLenUser = req.query.cpuLoadUser.length;
 		for (let i = 0; i < cpuLenUser; i++) {
-			statsItem.cpuLoadUser.push(req.query.cpuLoadUser[i]);
+			statsItem.cpuLoadUser.push(Number.parseFloat(req.query.cpuLoadUser[i]));
 		}
 
 		let cpuLenSys = req.query.cpuLoadSystem.length;
 		for (let i = 0; i < cpuLenSys; i++) {
-			statsItem.cpuLoadSystem.push(req.query.cpuLoadSystem[i]);
+			statsItem.cpuLoadSystem.push(Number.parseFloat(req.query.cpuLoadSystem[i]));
 		}
 
 		// Parse additional stuff
