@@ -76,12 +76,14 @@ app.all(api_stats + "report/", (req, res) => {
 			|| req.query.ramInterval == null 
 			|| req.query.ramMax == null 
 			|| req.query.cpuInterval == null 
-			|| req.query.ramLoad == null 
-			|| req.query.ramLoad.length == null 
 			|| req.query.cpuLoadUser == null 
 			|| req.query.cpuLoadUser.length == null
 			|| req.query.cpuLoadSystem == null 
-			|| req.query.cpuLoadSystem.length == null) {
+			|| req.query.cpuLoadSystem.length == null
+			|| req.query.ramLoadUsed == null 
+			|| req.query.ramLoadUsed.length == null
+			|| req.query.ramLoadCache == null 
+			|| req.query.ramLoadCache.length == null) {
 			res.send(formatErr("formatting error", example_report));
 			return;
 		}
@@ -91,14 +93,20 @@ app.all(api_stats + "report/", (req, res) => {
 		statsItem.ramInterval = Number.parseFloat(req.query.ramInterval);
 		statsItem.cpuInterval = Number.parseFloat(req.query.cpuInterval);
 		statsItem.hide = false;
-		statsItem.ramLoad = [];
+		statsItem.ramLoadUsed = [];
+		statsItem.ramLoadCache = [];
 		statsItem.cpuLoadUser = [];
 		statsItem.cpuLoadSystem = [];
 		statsItem.other = [];
 
-		let ramLen = req.query.ramLoad.length;
-		for (let i = 0; i < ramLen; i++) {
-			statsItem.ramLoad.push(Number.parseFloat(req.query.ramLoad[i]));
+		let ramLenUsed = req.query.ramLoadUsed.length;
+		for (let i = 0; i < ramLenUsed; i++) {
+			statsItem.ramLoadUsed.push(Number.parseFloat(req.query.ramLoadUsed[i]));
+		}
+
+		let ramLenCache = req.query.ramLoadCache.length;
+		for (let i = 0; i < ramLenCache; i++) {
+			statsItem.ramLoadCache.push(Number.parseFloat(req.query.ramLoadCache[i]));
 		}
 
 		let cpuLenUser = req.query.cpuLoadUser.length;
@@ -167,13 +175,16 @@ app.get(api_stats + "get/:key", (req, res) => {
 app.get(api_stats + "all/", (req, res) => {
 	let allKeys = Object.keys(savedStatsItems);
 	let toReturn = {};
-
 	toReturn.keys = [];
 
+	// Clone/copy over
 	for(let i = 0; i < allKeys.length; ++i) {
 		if(savedStatsItems[allKeys[i]].hide == false)
 			toReturn.keys.push(allKeys[i]);
 	}
+
+	// Alphabatize
+	toReturn.keys.sort();
 
 	res.send(toReturn);
 })

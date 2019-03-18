@@ -16,6 +16,18 @@ let cpuHistory = [];         // Stores previously measured values
 let ramHistory = [];         // Stores previously measured values
 
 
+function getRAMLoad(call) {
+	si.mem().then(data => {
+		let obj = {};
+		let decimals = 0;
+
+		obj.total = (data.total / 1024 / 1024).toFixed(decimals);
+		obj.used = (data.active / 1024 / 1024).toFixed(decimals);
+		obj.cache = (data.buffcache / 1024 / 1024).toFixed(decimals);
+
+		call(obj);
+	})
+}
 
 function getCPULoad(call)
 {
@@ -56,61 +68,68 @@ function generateStats(machine_name, interval, other) {
 	let averages = os.loadavg();
 	let cpus = os.cpus().length;
 	getCPULoad(cpuInfo => {
-		// Keep tabs on machine name
-		output.key = ("" + machine_name).toLowerCase();
+		getRAMLoad(memInfo => {
+			// Keep tabs on machine name
+			output.key = ("" + machine_name).toLowerCase();
 
-		// Write interval info
-		output.ramInterval = interval;
-		output.cpuInterval = interval;
+			// Write interval info
+			output.ramInterval = interval;
+			output.cpuInterval = interval;
 
-		// Comes in a value 0 to 1 * number of CPUs
-		let cpuDecimals = 2;
-		output.cpuUsage = {};
-		output.cpuUsage = cpuInfo;
-		storeValue(cpuHistory, output.cpuUsage);
+			// Comes in a value 0 to 1 * number of CPUs
+			let cpuDecimals = 2;
+			output.cpuUsage = {};
+			output.cpuUsage = cpuInfo;
+			storeValue(cpuHistory, output.cpuUsage);
 
-		// Both come in bytes, convert to MB
-		let memDecimals = 0;
-		output.memTotal = Number((os.totalmem() / 1024 / 1024).toFixed(memDecimals));
-		output.memFree = Number((os.freemem() / 1024 / 1024).toFixed(memDecimals));
-		output.memUsed = output.memTotal - output.memFree;
-		storeValue(ramHistory, output.memUsed);
+			// Both come in bytes, convert to MB
+			let memDecimals = 0;
+			output.memTotal = memInfo.total;
+			output.ramUsage = {};
+			output.ramUsage = memInfo;
+			storeValue(ramHistory, output.ramUsage);
 
-		// Construct query
-		let query = `https://derg.app${api_stats}report?key=${output.key}&ramMax=${output.memTotal}&ramInterval=${output.ramInterval}&cpuInterval=${output.cpuInterval}`;
+			// Construct query
+			let query = `https://derg.app${api_stats}report?key=${output.key}&ramMax=${output.memTotal}&ramInterval=${output.ramInterval}&cpuInterval=${output.cpuInterval}`;
 
-		// Add on contents of ramHistory
-		for (let i = 0; i < ramHistory.length; i++) {
-			query += "&ramLoad[]=" + ramHistory[i];
-		}
+			// Add on contents of ramHistory
+			for (let i = 0; i < ramHistory.length; i++) {
+				query += "&ramLoadUsed[]=" + ramHistory[i].used;
+			}
 
-		// Add on contents of cpuHistory
-		for (let i = 0; i < cpuHistory.length; i++) {
-			query += "&cpuLoadUser[]=" + cpuHistory[i].user.toFixed(2);
-		}
+			// Add on contents of ramHistory
+			for (let i = 0; i < ramHistory.length; i++) {
+				query += "&ramLoadCache[]=" + ramHistory[i].cache;
+			}
 
-		// Add on contents of cpuHistory
-		for (let i = 0; i < cpuHistory.length; i++) {
-			query += "&cpuLoadSystem[]=" + cpuHistory[i].system.toFixed(2);
-		}
+			// Add on contents of cpuHistory
+			for (let i = 0; i < cpuHistory.length; i++) {
+				query += "&cpuLoadUser[]=" + cpuHistory[i].user.toFixed(2);
+			}
 
-		// Add on contents of 'other' variable, either as an array or single value.
-		if(other != null) {
-			if(other.length != null) {
-				for (let i = 0; i < other.length; i++) {
-					query += "&other[]=" + other[i];
+			// Add on contents of cpuHistory
+			for (let i = 0; i < cpuHistory.length; i++) {
+				query += "&cpuLoadSystem[]=" + cpuHistory[i].system.toFixed(2);
+			}
+
+			// Add on contents of 'other' variable, either as an array or single value.
+			if(other != null) {
+				if(other.length != null) {
+					for (let i = 0; i < other.length; i++) {
+						query += "&other[]=" + other[i];
+					}
+				}
+				else {
+					query += "&other=" + other;
 				}
 			}
-			else {
-				query += "&other=" + other;
-			}
-		}
 
-		// Poke server to save off
-		//console.log(query);
-		request(query, function (error, response, body) {
-			if(error != null)
-				console.log("Errored when generating and logging stats:" + error);
+			// Poke server to save off
+			//console.log(query);
+			request(query, function (error, response, body) {
+				if(error != null)
+					console.log("Errored when generating and logging stats:" + error);
+			});
 		});
 	});
 };
