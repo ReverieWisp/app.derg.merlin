@@ -6,21 +6,23 @@ const util = require('util');
 const request = require('request');
 const helmet = require('helmet')
 
-// Settings
+// Settings and local vars
 const api_port = 8080;
 const api_root = "/api/v1/";
 const api_stats = api_root + "stats/";
 
-// Local variables 
 let savedStatsItems = {};
+let serverName = "merlin";
 
 
-// --------------------------------------------------
 
+  //////////////////////////////////
+ // Usage, setup, and processing //
+//////////////////////////////////
 
 // Set appropriate headers - no sniff, and adjust headers.
 // https://helmetjs.github.io/docs/dont-sniff-mimetype/
-app.use(helmet.noSniff())
+app.use(helmet.noSniff());
 app.use(function(req, res, next) {
 	res.header("Access-Control-Allow-Origin", "*");
 	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
@@ -28,146 +30,190 @@ app.use(function(req, res, next) {
 });
 
 
-// Root
-app.get(api_root, (req, res) => {
-	res.send('Yep, this is the API root for v1!');
-});
+  //////////////////////
+ // Helper functions //
+//////////////////////
+
+// GlobalLog object for consistent logging
+GlobalLog = {};
+GlobalLog.log = (toLog) => { console.log(`[Log] ${toLog}`); }
+GlobalLog.warn = (toLog) => { console.log(`[Warning] ${toLog}`) }
+GlobalLog.error = (toLog) => { console.log(`[ERROR] ${toLog}`) }
+GlobalLog.fatal = (toThrow) => { throw `[ERROR] ${toThrow}`; }
 
 
-// Stats
-app.get(api_stats, (req, res) => {
-	res.send('Stats Root, append \'/name\' for target machine');
-});
+// Format a successful generic response
+function formatSuccess(optionalNote) {
+	obj = {};
+	obj.server = serverName;
+	obj.status = `success`;
 
-
-// Error format support
-function formatErr(toFormat, formatExample) {
-	let obj = {};
-	obj.error = toFormat;
-
-	// If an example of the API for this is not sent correctly, sent back an example.
-	if(formatExample != null)
-		obj.apiExample = formatExample;
+	if(optionalNote)
+		obj.note = formatExtra;
 
 	return obj;
 }
 
 
+// Format a failed generic response
+function formatError(description, optionalNote) {
+	let obj = {};
+	obj.server = `serverName`;
+	obj.status = `error`;
+	obj.description = description;
+
+	// If an example of the API for this is not sent correctly, sent back an example.
+	if(optionalNote != null)
+		obj.note = formatExample;
+
+	return obj;
+}
+
+
+// If the key is pressent in the query string, parse it into the target.
+function optionalAssignItem(req, target, key) {
+	if(req.query[key] != null)
+		target[key] = req.query[key];
+}
+
+
+// Requires the key to exist, then parses it from the query and assigns to the target.
+// Throws an exception if the key is not present.
+function verifyAssignItem(req, res, target, key) {
+	if(req.query[key] == null) {
+		let formatted = `Key not found - Expected to find '${key}'`;
+
+		res.send(formatError(formatted));
+		GlobalLog.fatal(formatted);
+	} else {
+		optionalAssignItem(req, target, key);
+	}
+}
+
+
+// Store a specific value in an array with a max length
+function storeValue(target_array, toStore, length) {
+	target_array.unshift(toStore);
+
+	if(target_array.length > length)
+		target_array.pop();
+}
+
+
+// Copy the most recent value of the key in from the list of saved versions.
+// If it isn't present, continue, but note it in a warning that it was expected.
+function copyKeyLatest(target, source, key, processCallback) {
+	if(source[0].key != null) {
+		if(processCallback != null)
+			target[key] = processCallback(source[0][key]);
+		else
+			target[key] = source[0][key];
+	} else {
+		GlobalLog.Warning(`Couldn't find expected key '${key}' when forming response`);
+	}
+}
+
+
+// Copy all values into an array on the target under the name of the key.
+// If it isn't present, continue, but note it in a warning that it was expected.
+function copyKeyAccumulate(target, source, key, processCallback) {
+	if(source[0].key != null) {
+		target[key] = [];
+
+		for(let i = 0; i < source.length; ++i) {
+			if(processCallback != null)
+				target[key].push(processCallback(source[i][key]));
+			else
+				target[key] = source[i][key];
+		}
+	} else {
+		GlobalLog.Warning(`Couldn't find expected key '${key}' when forming response`);
+	}
+}
+
+
+
+  ///////////////////
+ // API Endpoints //
+///////////////////
+
+// Root
+app.get(api_root, (req, res) => {
+	res.send(formatSuccess('Yep, this is the API root for v1!'));
+});
+
+
+// Stats
+app.get(api_stats, (req, res) => {
+	res.send(formatSuccess(`Append '/get/:machine_name' for a target, or '/all' for a list of machines`));
+});
+
+
 // This api endpoint allows a specific key to report its max ram and associated load information.
 // The information is stored however it is entered for retrieval later. 
 // It outputs the formatted stats item so you can verify what was logged.
-// Fields: 
-//   key - string that is an identifier for the system
-//   ramMax - max amount of ram, in MB
-//   ramInterval - polling rate of ram, in ms
-//   cpuInterval - polling rate of cpu, in ms
-//   ramLoad[] - array of sets of used ram values, arbitrary length.
-//   cpuLoad[] - array of sets of used cpu values, arbitrary length.
-//   other[] (optional) - additional info, string array, anything, arbitrary length.
-//   hide - if this is "true", true, otherwise false. This determins if it shows up in the general list.
-let example_report = "/api/v1/stats/report?key=test&ramMax=8192&ramInterval=5000&ramLoad[]=2141&cpuInterval=5000&cpuLoadUser[]=34&cpuLoadUser[]=7.24&cpuLoadSystem[]=3.4&cpuLoadSystem[]=7.7&other[]=stuff";
 app.all(api_stats + "report/", (req, res) => {
-	let statsItem = {};
-	let count = 0;
+	if(Object.keys(req.query).length >= 1) {
+		// Verify and parse keys
+		let statsItem = {};
+		verifyAssignItem(req, res, statsItem, "key");
+		verifyAssignItem(req, res, statsItem, "trackedLength");
+		verifyAssignItem(req, res, statsItem, "refreshRate");
+		verifyAssignItem(req, res, statsItem, "ramMax");
+		verifyAssignItem(req, res, statsItem, "ramLoadUsed");
+		verifyAssignItem(req, res, statsItem, "ramLoadCached");
+		verifyAssignItem(req, res, statsItem, "cpuLoadUser");
+		verifyAssignItem(req, res, statsItem, "cpuLoadSystem");
+		optionalAssignItem(req, statsItem, "hide");
+		optionalAssignItem(req, statsItem, "other");
 
-	if(Object.keys(req.query).length >= 1)
-	{
-		if(req.query.key == null 
-			|| req.query.ramInterval == null 
-			|| req.query.ramMax == null 
-			|| req.query.cpuInterval == null 
-			|| req.query.cpuLoadUser == null 
-			|| req.query.cpuLoadUser.length == null
-			|| req.query.cpuLoadSystem == null 
-			|| req.query.cpuLoadSystem.length == null
-			|| req.query.ramLoadUsed == null 
-			|| req.query.ramLoadUsed.length == null
-			|| req.query.ramLoadCache == null 
-			|| req.query.ramLoadCache.length == null) {
-			res.send(formatErr("formatting error", example_report));
-			return;
-		}
+		GlobalLog.log(`Recieved report from '${statsItem.key}'`);
+		
+		if(!savedStatsItems.hasOwnProperty(statsItem.key))
+			savedStatsItems[statsItem.key] = [];
 
-		statsItem.key = req.query.key;
-		statsItem.ramMax = Number.parseFloat(req.query.ramMax);
-		statsItem.ramInterval = Number.parseFloat(req.query.ramInterval);
-		statsItem.cpuInterval = Number.parseFloat(req.query.cpuInterval);
-		statsItem.hide = false;
-		statsItem.ramLoadUsed = [];
-		statsItem.ramLoadCache = [];
-		statsItem.cpuLoadUser = [];
-		statsItem.cpuLoadSystem = [];
-		statsItem.other = [];
-
-		let ramLenUsed = req.query.ramLoadUsed.length;
-		for (let i = 0; i < ramLenUsed; i++) {
-			statsItem.ramLoadUsed.push(Number.parseFloat(req.query.ramLoadUsed[i]));
-		}
-
-		let ramLenCache = req.query.ramLoadCache.length;
-		for (let i = 0; i < ramLenCache; i++) {
-			statsItem.ramLoadCache.push(Number.parseFloat(req.query.ramLoadCache[i]));
-		}
-
-		let cpuLenUser = req.query.cpuLoadUser.length;
-		for (let i = 0; i < cpuLenUser; i++) {
-			statsItem.cpuLoadUser.push(Number.parseFloat(req.query.cpuLoadUser[i]));
-		}
-
-		let cpuLenSys = req.query.cpuLoadSystem.length;
-		for (let i = 0; i < cpuLenSys; i++) {
-			statsItem.cpuLoadSystem.push(Number.parseFloat(req.query.cpuLoadSystem[i]));
-		}
-
-		// Parse additional stuff
-		if(req.query.other != null) {
-			if(req.query.other.length != null) {
-				let otherLen = req.query.other.length;
-				for (let i = 0; i < ramLen; i++) {
-					statsItem.other.push(req.query.other[i]);
-				}
-			}
-			else {
-				statsItem.other.push(req.query.other);
-			}
-		}
-
-		// Parse if we're hiding or not from the 'all' list
-		if(req.query.hide != null) {
-			if(req.query.hide == "true")
-				statsItem.hide = true;
-		}
-
-		console.log("Report from '" + statsItem.key + "'");
+		storeValue(savedStatsItems[statsItem.key], statsItem, statsItem.trackedLength);
+		res.send(formatSuccess());
+	} else {
+		res.send(formatError("Could not parse or identify query string"));
 	}
-
-	savedStatsItems[statsItem.key] = statsItem;
-	res.send(statsItem);
 });
 
 
 // Resets the internal arrays
 app.all(api_stats + "reset/", (req, res) => {
 	savedStatsItems = {};
-	res.send("cleared.");
+	res.send(formatSuccess());
 });
 
 
 // Allows the retrieval of temporarily stored information
-app.get(api_stats + "get/:key", (req, res) => {
-	let key = req.param("key");
-	let error = "Invalid stats 'get' request";
+app.get(api_stats + "get/:id", (req, res) => {
+	let id = req.param("id");
+	let error = formatError("Invalid stats 'get' request");
 
-	if(key == null) {
+	if(id == null) {
 		res.send(error);
 		return;
 	}
 
-	let caseCorrected = key.toLowerCase();
-	if(savedStatsItems.hasOwnProperty(caseCorrected))
-		res.send(savedStatsItems[caseCorrected]);
-	else
+	if(savedStatsItems.hasOwnProperty(id)) {
+		let obj = {};
+		let source = savedStatsItems[id];
+
+		copyKeyLatest(obj, source, "key");
+		copyKeyLatest(obj, source, "trackedLength", Number.parseFloat);
+		copyKeyLatest(obj, source, "refreshRate", Number.parseFloat);
+		copyKeyLatest(obj, source, "ramMax", Number.parseFloat);
+		copyKeyAccumulate(obj, source, "ramLoadUsed", Number.parseFloat);
+		copyKeyAccumulate(obj, source, "ramLoadCached", Number.parseFloat);
+		copyKeyAccumulate(obj, source, "cpuLoadUser", Number.parseFloat);
+		copyKeyAccumulate(obj, source, "cpuLoadSystem", Number.parseFloat);
+
+		res.send(obj);
+	} else {
 		res.send(error);
+	}
 });
 
 
@@ -175,6 +221,7 @@ app.get(api_stats + "get/:key", (req, res) => {
 app.get(api_stats + "all/", (req, res) => {
 	let allKeys = Object.keys(savedStatsItems);
 	let toReturn = {};
+
 	toReturn.keys = [];
 
 	// Clone/copy over
@@ -186,11 +233,17 @@ app.get(api_stats + "all/", (req, res) => {
 	// Alphabatize
 	toReturn.keys.sort();
 
+	// Respond
 	res.send(toReturn);
 })
 
 
+
+  ////////////////////
+ // Tell it to run //
+////////////////////
+
 // Bind to port and begin listening
 app.listen(api_port, () => {
-	console.log(`API active, listening on port ${api_port}`)
+	GlobalLog.log(`API active, listening on port ${api_port}`)
 });

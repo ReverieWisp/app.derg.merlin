@@ -7,30 +7,28 @@ const request = require('request');      // Used for issuing GET request
 const config = require('./config');      // Custom-defined config file
 const si = require('systeminformation'); // System information 
 
+
 // Const settings - see config variable for external.
 const api_root = "/api/v1/";
 const api_stats = api_root + "stats/";
 
-// Local variables
-let cpuHistory = [];         // Stores previously measured values
-let ramHistory = [];         // Stores previously measured values
 
-
+// Gets the ram used from the OS
 function getRAMLoad(call) {
 	si.mem().then(data => {
 		let obj = {};
-		let decimals = 0;
 
-		obj.total = (data.total / 1024 / 1024).toFixed(decimals);
-		obj.used = (data.active / 1024 / 1024).toFixed(decimals);
-		obj.cache = (data.buffcache / 1024 / 1024).toFixed(decimals);
+		obj.total = (data.total / 1024 / 1024);
+		obj.used = (data.active / 1024 / 1024);
+		obj.cached = (data.buffcache / 1024 / 1024);
 
 		call(obj);
 	})
 }
 
-function getCPULoad(call)
-{
+
+// Gets the CPU load from the OS
+function getCPULoad(call) {
 	si.currentLoad().then(data => {
 		let numCPUs = data.cpus.length;
 		let loadUser = 0;
@@ -45,6 +43,7 @@ function getCPULoad(call)
 		loadSystem /= numCPUs;
 
 		let obj = {};
+
 		obj.user = loadUser;
 		obj.system = loadSystem;
 
@@ -53,76 +52,45 @@ function getCPULoad(call)
 }
 
 
-// Store a specific
-function storeValue(target_array, toStore) {
-	target_array.unshift(toStore);
-
-	if(target_array.length > config.maxTrackedLength)
-		target_array.pop();
-}
-
-
 // machine_name is the name that is tracked for stats purposes, and is 
-function generateStats(machine_name, interval, other) {
+function generateStats(other) {
 	let output = {};
 	let averages = os.loadavg();
 	let cpus = os.cpus().length;
+
 	getCPULoad(cpuInfo => {
 		getRAMLoad(memInfo => {
-			// Keep tabs on machine name
-			output.key = ("" + machine_name).toLowerCase();
-
-			// Write interval info
-			output.ramInterval = interval;
-			output.cpuInterval = interval;
-
-			// Comes in a value 0 to 1 * number of CPUs
+			// Trim values
+			let ramDecimals = 0;
 			let cpuDecimals = 2;
-			output.cpuUsage = {};
-			output.cpuUsage = cpuInfo;
-			storeValue(cpuHistory, output.cpuUsage);
 
-			// Both come in bytes, convert to MB
-			let memDecimals = 0;
-			output.memTotal = memInfo.total;
-			output.ramUsage = {};
-			output.ramUsage = memInfo;
-			storeValue(ramHistory, output.ramUsage);
+			// Keep tabs on machine name
+			output.key = ("" + config.machineKey).toLowerCase();
+			output.trackedLength = config.trackedLength;
+			output.refreshRate = config.refreshRate;
+			output.ramMax = memInfo.total.toFixed(ramDecimals);
+			output.ramLoadUsed = memInfo.used.toFixed(ramDecimals);
+			output.ramLoadCached = memInfo.cached.toFixed(ramDecimals);
+			output.cpuLoadUser = cpuInfo.user.toFixed(cpuDecimals);
+			output.cpuLoadSystem = cpuInfo.system.toFixed(cpuDecimals);
 
 			// Construct query
-			let query = `https://derg.app${api_stats}report?key=${output.key}&ramMax=${output.memTotal}&ramInterval=${output.ramInterval}&cpuInterval=${output.cpuInterval}`;
+			let query = `https://derg.app${api_stats}report?`;
+			let firstPass = true;
 
-			// Add on contents of ramHistory
-			for (let i = 0; i < ramHistory.length; i++) {
-				query += "&ramLoadUsed[]=" + ramHistory[i].used;
-			}
+			for (var key in output) {
+				if (output.hasOwnProperty(key)) {
+					if(!firstPass)
+						query += '&';
 
-			// Add on contents of ramHistory
-			for (let i = 0; i < ramHistory.length; i++) {
-				query += "&ramLoadCache[]=" + ramHistory[i].cache;
-			}
-
-			// Add on contents of cpuHistory
-			for (let i = 0; i < cpuHistory.length; i++) {
-				query += "&cpuLoadUser[]=" + cpuHistory[i].user.toFixed(2);
-			}
-
-			// Add on contents of cpuHistory
-			for (let i = 0; i < cpuHistory.length; i++) {
-				query += "&cpuLoadSystem[]=" + cpuHistory[i].system.toFixed(2);
-			}
-
-			// Add on contents of 'other' variable, either as an array or single value.
-			if(other != null) {
-				if(other.length != null) {
-					for (let i = 0; i < other.length; i++) {
-						query += "&other[]=" + other[i];
-					}
-				}
-				else {
-					query += "&other=" + other;
+					query += `${key}=${output[key]}`;
+					firstPass = false;
 				}
 			}
+
+			// Add on contents of 'other' variable if it exists.
+			if(other != null)
+				query += "&other=" + other;
 
 			// Poke server to save off
 			//console.log(query);
@@ -137,8 +105,8 @@ function generateStats(machine_name, interval, other) {
 
 // Refresh automatically
 setInterval(function() {
-	generateStats(config.machineKey, config.refreshInterval, null) // name, refresh interval, then any extra info as an array or string.
-}, config.refreshInterval);
+	generateStats(null) // name, refresh interval, then any extra info as an array or string.
+}, config.refreshRate);
 
 
 // Denote logging
