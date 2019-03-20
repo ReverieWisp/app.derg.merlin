@@ -138,13 +138,13 @@ function copyKeyAccumulate(target, source, key, processCallback) {
 ///////////////////
 
 // Root
-app.get(api_root, (req, res) => {
+app.all(api_root, (req, res) => {
 	res.send(formatSuccess('Yep, this is the API root for v1!'));
 });
 
 
 // Stats
-app.get(api_stats, (req, res) => {
+app.all(api_stats, (req, res) => {
 	res.send(formatSuccess(`Append '/get/:machine_name' for a target, or '/all' for a list of machines`));
 });
 
@@ -188,7 +188,7 @@ app.all(api_stats + "reset/", (req, res) => {
 
 
 // Allows the retrieval of temporarily stored information
-app.get(api_stats + "get/:id", (req, res) => {
+app.all(api_stats + "get/:id", (req, res) => {
 	let id = req.param("id");
 	let error = formatError("Invalid stats 'get' request");
 
@@ -218,15 +218,14 @@ app.get(api_stats + "get/:id", (req, res) => {
 
 
 // Allows you to poll all possible logged systems to request
-app.get(api_stats + "all/", (req, res) => {
+app.all(api_stats + "all/", (req, res) => {
 	let allKeys = Object.keys(savedStatsItems);
 	let toReturn = {};
 
 	toReturn.keys = [];
-
 	// Clone/copy over
 	for(let i = 0; i < allKeys.length; ++i) {
-		if(savedStatsItems[allKeys[i]].hide == false)
+		if(savedStatsItems[allKeys[i]].hide == null || savedStatsItems[allKeys[i]].hide == false)
 			toReturn.keys.push(allKeys[i]);
 	}
 
