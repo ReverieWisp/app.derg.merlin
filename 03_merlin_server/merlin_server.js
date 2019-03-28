@@ -8,7 +8,9 @@ const helmet = require('helmet')
 
 // Settings and local vars
 const api_port = 8080;
-const api_root = "/api/v1/";
+const api_separator = "/";
+const api_forward = api_separator + "api/";
+const api_root = api_forward + "v1/";
 const api_stats = api_root + "stats/";
 
 let savedStatsItems = {};
@@ -49,7 +51,7 @@ function formatSuccess(optionalNote) {
 	obj.status = `success`;
 
 	if(optionalNote)
-		obj.note = formatExtra;
+		obj.note = optionalNote;
 
 	return obj;
 }
@@ -136,6 +138,14 @@ function copyKeyAccumulate(target, source, key, processCallback) {
   ///////////////////
  // API Endpoints //
 ///////////////////
+
+app.all(api_separator, (req, res) => {
+	res.send('<!DOCTYPE html><html><head><title>Dragon App</title></head><style>body{font-family: monospace;}</style><body>Welcome to derg.app, an API and service domain managed by <a href="https://www.reveriewisp.com/">Wisp</a>!</body><html>');
+});
+
+app.all(api_forward, (req, res) => {
+	res.send(formatSuccess('Version needs to be specified in path, formatted as `vN/`. The most recent version is `v1`.'));
+});
 
 // Root
 app.all(api_root, (req, res) => {
