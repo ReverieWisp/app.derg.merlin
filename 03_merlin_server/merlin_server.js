@@ -1,20 +1,24 @@
 // Requirements
-const os = require('os');
 const express = require('express');
 const app = express();
 const util = require('util');
 const request = require('request');
 const helmet = require('helmet')
 
-// Settings and local vars
-const api_port = 8080;
-const api_separator = "/";
-const api_forward = api_separator + "api/";
-const api_root = api_forward + "v1/";
-const api_stats = api_root + "stats/";
+// markov
+const Markov = require('markov-strings').default;
 
-let savedStatsItems = {};
-let serverName = "merlin";
+
+
+  ///////////////////////////////////
+ // Endpoint and port information //
+///////////////////////////////////
+
+// General config
+const api_port = 8080;                      // TODO: External config
+const api_separator = "/";                  // TODO: External config
+const api_forward = api_separator + "api/"; // TODO: External config
+const api_root = api_forward + "v1/";       // TODO: External config
 
 
 
@@ -22,7 +26,7 @@ let serverName = "merlin";
  // Usage, setup, and processing //
 //////////////////////////////////
 
-// Set appropriate headers - no sniff, and adjust headers.
+// Set appropriate headers - no sniff, and adjust to allow cross origin request.
 // https://helmetjs.github.io/docs/dont-sniff-mimetype/
 app.use(helmet.noSniff());
 app.use(function(req, res, next) {
@@ -30,6 +34,7 @@ app.use(function(req, res, next) {
 	res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 	next();
 });
+
 
 
   //////////////////////
@@ -135,30 +140,45 @@ function copyKeyAccumulate(target, source, key, processCallback) {
 
 
 
-  ///////////////////
- // API Endpoints //
-///////////////////
+  ///////////////////////////
+ // General API Endpoints //
+///////////////////////////
 
+// Site home: /
 app.all(api_separator, (req, res) => {
 	res.send('<!DOCTYPE html><html><head><title>Dragon App</title></head><style>body{font-family: monospace;}</style><body>Welcome to derg.app, an API and service domain managed by <a href="https://www.reveriewisp.com/">Wisp</a>!</body><html>');
 });
 
+// API forward: /api/
 app.all(api_forward, (req, res) => {
 	res.send(formatSuccess('Version needs to be specified in path, formatted as `vN/`. The most recent version is `v1`.'));
 });
 
-// Root
+// API root: /api/vN/
 app.all(api_root, (req, res) => {
 	res.send(formatSuccess('Yep, this is the API root for v1!'));
 });
 
 
-// Stats
+
+  ///////////////
+ // Stats API //
+///////////////
+
+// Variables
+const api_stats = api_root + "stats/";
+
+let savedStatsItems = {};
+let serverName = "merlin"; // TODO: External config 
+
+// .../
+// The root of stats. Doesn't do anything but provide help text.
 app.all(api_stats, (req, res) => {
 	res.send(formatSuccess(`Append '/get/:machine_name' for a target, or '/all' for a list of machines`));
 });
 
 
+// .../report/
 // This api endpoint allows a specific key to report its max ram and associated load information.
 // The information is stored however it is entered for retrieval later. 
 // It outputs the formatted stats item so you can verify what was logged.
@@ -190,13 +210,15 @@ app.all(api_stats + "report/", (req, res) => {
 });
 
 
-// Resets the internal arrays
+// .../reset/
+// Resets the internal arrays so that stats can be read from the beginning again
 app.all(api_stats + "reset/", (req, res) => {
 	savedStatsItems = {};
 	res.send(formatSuccess());
 });
 
 
+// .../get/:id
 // Allows the retrieval of temporarily stored information
 app.all(api_stats + "get/:id", (req, res) => {
 	let id = req.param("id");
@@ -244,7 +266,44 @@ app.all(api_stats + "all/", (req, res) => {
 
 	// Respond
 	res.send(toReturn);
-})
+});
+
+
+  //////////////////////
+ // Markov chain API //
+//////////////////////
+
+const api_markov = api_root + "markov/";
+const data = ["Here's one sentence", "And here's another one that has some words in it", "Today I went to the store and I bought a bunch of food", "I regret the decision a bit because a lot of the food was bad.", "Later tonight I will go see a movie or something", "Sometimes I like to water houseplants", "I dislike the idea of some types of annoying words"];
+
+// Build the Markov generator
+const markov = new Markov(data, { stateSize: 2 });
+markov.buildCorpus();
+ 
+const options = {
+  maxTries: 200000, // Give up if I don't have a sentence after 20 tries (default is 10)
+  filter: (result) => {
+    return
+      result.string.split(' ').length >= 1;
+  }
+}
+
+// .../get/:input
+// Get a generated response based on the input provided
+app.all(api_markov + "get/:input", (req, res) => {
+	let input = req.param("input");
+	let error = formatError("Invalid markov 'get' request");
+
+	if(input == null) {
+		res.send(error);
+		return;
+	}
+
+	// Generate a sentence
+	const result = markov.generate(options)
+
+	res.send(result);
+});
 
 
 
