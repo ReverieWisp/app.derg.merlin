@@ -269,24 +269,27 @@ app.all(api_stats + "all/", (req, res) => {
 });
 
 
+
   //////////////////////
  // Markov chain API //
 //////////////////////
+// From: https://www.npmjs.com/package/markov-strings
 
+// Config
 const api_markov = api_root + "markov/";
-const data = ["Here's one sentence", "And here's another one that has some words in it", "Today I went to the store and I bought a bunch of food", "I regret the decision a bit because a lot of the food was bad.", "Later tonight I will go see a movie or something", "Sometimes I like to water houseplants", "I dislike the idea of some types of annoying words"];
+const data = require('./sentences.js');
 
 // Build the Markov generator
 const markov = new Markov(data, { stateSize: 2 });
 markov.buildCorpus();
- 
-const options = {
-  maxTries: 200000, // Give up if I don't have a sentence after 20 tries (default is 10)
-  filter: (result) => {
-    return
-      result.string.split(' ').length >= 1;
-  }
-}
+
+
+// .../get/
+// Response with no specified input for markov chain creation with defaults
+app.all(api_markov + "get", (req, res) => {
+	runMarkov(req, res)
+});
+
 
 // .../get/:input
 // Get a generated response based on the input provided
@@ -299,11 +302,24 @@ app.all(api_markov + "get/:input", (req, res) => {
 		return;
 	}
 
-	// Generate a sentence
+	runMarkov(req, res);
+});
+
+
+// Generates the markov chain with specified options
+function runMarkov(req, res) {
+	const options = {
+	  maxTries: 200, 
+	  filter: (result) => {
+	    return result.score > 0 &&
+	    result.refs.length > 2;
+	  }
+	}
+
 	const result = markov.generate(options)
 
 	res.send(result);
-});
+}
 
 
 
