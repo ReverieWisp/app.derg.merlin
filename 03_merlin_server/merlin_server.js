@@ -138,7 +138,25 @@ function copyKeyAccumulate(target, source, key, processCallback) {
 	}
 }
 
+// See if more than a few tracking ticks have gone by for the source.
+// If more than the timeout number, remove it from our tracked list.
+function verifyNotStale(target_stats, id)
+{
+	const ticksUntilTimeout = 6;
 
+	let dataObj = target_stats[id][0]; // Most recent tick object
+	let ms = (new Date()).getTime();
+	let dif = ms - dataObj.lastTime;
+	let barrier = dataObj.refreshRate * ticksUntilTimeout;
+
+	if(dif > barrier) {
+		GlobalLog.log("Due to timeout of up-to-date info, removing " + dataObj.key + "...");
+		delete target_stats[id];
+		return false;
+	}
+
+	return true;
+}
 
   ///////////////////////////
  // General API Endpoints //
@@ -197,15 +215,22 @@ app.all(api_stats + "report/", (req, res) => {
 		optionalAssignItem(req, statsItem, "hide");
 		optionalAssignItem(req, statsItem, "other");
 
-		GlobalLog.log(`Recieved report from '${statsItem.key}'`);
-		
+		// Timestamp and log
+		let ms = (new Date()).getTime();
+		GlobalLog.log(`Recieved report from '${statsItem.key}' at ${ms}`);
+		statsItem["lastTime"] = ms;
+
+		// Create empty item if we need to
 		if(!savedStatsItems.hasOwnProperty(statsItem.key))
 			savedStatsItems[statsItem.key] = [];
 
+		// Save
 		storeValue(savedStatsItems[statsItem.key], statsItem, statsItem.trackedLength);
 		res.send(formatSuccess());
+		return;
 	} else {
 		res.send(formatError("Could not parse or identify query string"));
+		return;
 	}
 });
 
@@ -232,6 +257,12 @@ app.all(api_stats + "get/:id", (req, res) => {
 	if(savedStatsItems.hasOwnProperty(id)) {
 		let obj = {};
 		let source = savedStatsItems[id];
+		
+		if(!verifyNotStale(savedStatsItems, id)) {
+			GlobalLog.log('Dead item removed.');
+			res.send(error);
+			return;
+		}
 
 		copyKeyLatest(obj, source, "key");
 		copyKeyLatest(obj, source, "trackedLength", Number.parseFloat);
@@ -243,8 +274,10 @@ app.all(api_stats + "get/:id", (req, res) => {
 		copyKeyAccumulate(obj, source, "cpuLoadSystem", Number.parseFloat);
 
 		res.send(obj);
+		return;
 	} else {
 		res.send(error);
+		return;
 	}
 });
 
@@ -255,10 +288,14 @@ app.all(api_stats + "all/", (req, res) => {
 	let toReturn = {};
 
 	toReturn.keys = [];
+
 	// Clone/copy over
 	for(let i = 0; i < allKeys.length; ++i) {
-		if(savedStatsItems[allKeys[i]].hide == null || savedStatsItems[allKeys[i]].hide == false)
-			toReturn.keys.push(allKeys[i]);
+		let current = allKeys[i];
+
+		if(savedStatsItems[current].hide == null || savedStatsItems[current].hide == false) {
+			toReturn.keys.push(current);
+		}
 	}
 
 	// Alphabatize
