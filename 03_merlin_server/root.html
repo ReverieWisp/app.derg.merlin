@@ -2,12 +2,11 @@
 <html>
 	<head>
 		<meta charset="UTF-8">
-		<meta name="description" content="Dragon applications and services">
-		<meta name="keywords" content="app, apps, applications, derg, dragon, service, services">
-		<meta name="author" content="Reverie Wisp">
+		<meta name="description" content="rw0">
+		<meta name="author" content="rw0">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-		<title>Dragon App</title>
+		<title>rw0</title>
 	</head>
 	
 	<style>
@@ -17,10 +16,22 @@
 	</style>
 
 	<body>
-		<p>Welcome to derg.app, an API &amp; services domain.</p>
+		<!--ENTRY_SPACE-->
+		<p><img src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsAAAA7AAWrWiQkAAAEmSURBVFhH5ZfrDsMgCIXr3v+dO2nAWeQmuvXHvmRp7RTOAbpk5TzP468peJXKQN99lT5JqBe1Ze1MKQXW1zXLtACCC8nywiswFaUm3TK9vQARcNq73Y0pgBJjiQcRVAWYgyxuBVh/t1fCFeCxOgumAOaemK2CKXC5AgFAsCriFwIIUcS0gOTEU9uGw6YAngzWq0NXuZ33hrDm/OxXkkeHUtzntgCT0mcXLdbqEIZfSamdQFpADRBOLkHtTAuoAfDOB9wq87PcgmUiAsCqZFdyBM9uzy33gCegT+yJGO6t5DRDPCjfHHWe4Yr91Aw0YxkBUlXSPFGBm4F+ofVWc5yZhSHW7gpAAk2w+Jweem60oP05vsf6rhH6d+z97OL7jqsHiJiQOY4330BlLuIMiR8AAAAASUVORK5CYII=">API &amp; SERVICES<br/>------------------</p>
+		
 		<p>
 			<strong>Links</strong><br/>
-			<a href="https://status.derg.app/">[Status - Hardware]</a>
+			<a href="https://status.rw0.pw/">[Status - Hardware]</a>
 		</p>
+
+		<script>
+			let loc = (""+window.location);
+			const delimiter = "#";
+			if(loc.includes(delimiter)) {
+				let parsed = loc.split(delimiter)[1];
+				let target = decodeURIComponent(parsed);
+				window.location = target;
+			}
+		</script>
 	</body>
-<html>
+</html>

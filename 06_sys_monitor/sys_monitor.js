@@ -75,7 +75,7 @@ function generateStats(other) {
 			output.cpuLoadSystem = cpuInfo.system.toFixed(cpuDecimals);
 
 			// Construct query
-			let query = `https://derg.app${api_stats}report?`;
+			let query = `https://rw0.pw${api_stats}report?`;
 			let firstPass = true;
 
 			for (var key in output) {

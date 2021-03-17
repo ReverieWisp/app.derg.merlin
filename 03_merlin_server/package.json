@@ -4,6 +4,7 @@
   "description": "Status viewing",
   "main": "merlin_server.js",
   "dependencies": {
+    "cors": "^2.8.5",
     "dont-sniff-mimetype": "^1.0.0",
     "express": "^4.16.4",
     "helmet": "^3.16.0",
