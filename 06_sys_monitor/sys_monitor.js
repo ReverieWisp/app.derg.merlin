@@ -7,12 +7,6 @@ const request = require('request');      // Used for issuing GET request
 const config = require('./config');      // Custom-defined config file
 const si = require('systeminformation'); // System information 
 
-
-// Const settings - see config variable for external.
-const api_root = "/api/v1/";
-const api_stats = api_root + "stats/";
-
-
 // Gets the ram used from the OS
 function getRAMLoad(call) {
 	si.mem().then(data => {
@@ -75,7 +69,7 @@ function generateStats(other) {
 			output.cpuLoadSystem = cpuInfo.system.toFixed(cpuDecimals);
 
 			// Construct query
-			let query = `https://rw0.pw${api_stats}report?`;
+			let query = `{config.endpoint}/report?`;
 			let firstPass = true;
 
 			for (var key in output) {
