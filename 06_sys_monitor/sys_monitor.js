@@ -89,8 +89,11 @@ function generateStats(other) {
 			// Poke server to save off
 			//console.log(query);
 			request(query, function (error, response, body) {
-				if(error != null)
+				if(error != null) {
 					console.log("Errored when generating and logging stats:" + error);
+				} else {
+					console.log(`Sent. Received response ${JSON.stringify(response)}`);
+				}
 			});
 		});
 	});
