@@ -69,7 +69,7 @@ function generateStats(other) {
 			output.cpuLoadSystem = cpuInfo.system.toFixed(cpuDecimals);
 
 			// Construct query
-			let query = `{config.endpoint}/report?`;
+			let query = `${config.endpoint}/report?`;
 			let firstPass = true;
 
 			for (var key in output) {
