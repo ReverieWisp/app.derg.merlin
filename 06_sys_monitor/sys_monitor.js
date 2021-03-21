@@ -29,8 +29,8 @@ function getCPULoad(call) {
 		let loadSystem = 0;
 
 		for(let i = 0; i < numCPUs; ++i) {
-			loadUser += data.cpus[i].load_user;
-			loadSystem += data.cpus[i].load_system;
+			loadUser += data.cpus[i].loadUser;
+			loadSystem += data.cpus[i].loadSystem;
 		}
 
 		loadUser /= numCPUs;
