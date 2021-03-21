@@ -14,7 +14,7 @@ config.trackedLength = 50;
 config.refreshRate = 5000;
 
 // Endpoint target
-config.endpoint = "rw0.pw/api/v1/report";
+config.endpoint = "example.com/location/of/merlin/server";
 
 // =================================
 module.exports = config;
