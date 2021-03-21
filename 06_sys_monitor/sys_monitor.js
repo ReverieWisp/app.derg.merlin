@@ -92,7 +92,7 @@ function generateStats(other) {
 				if(error != null) {
 					console.log("Errored when generating and logging stats:" + error);
 				} else {
-					console.log(`Sent. Received response ${JSON.stringify(response)}`);
+					console.log(`Sent. Received response code ${response.statusCode}`);
 				}
 			});
 		});
