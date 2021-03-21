@@ -104,4 +104,4 @@ setInterval(function() {
 
 
 // Denote logging
-console.log(`Client issuing reports every ${config.refreshInterval}ms under key '${config.machineKey}'`);
+console.log(`Client issuing reports every [${config.refreshRate}]ms under key '${config.machineKey}'`);
